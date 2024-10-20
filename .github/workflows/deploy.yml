@@ -37,7 +37,7 @@ jobs:
       run: |
         mkdir lambda_function_code
         xargs -a changed_files.txt -I {} cp --parents {} lambda_function_code/
-        zip -r lambda_function_code.zip lambda_function_code/ \
+        zip -r lambda_function_code.zip \
         -x "*.git*" "*.zip" "*.gitignore"
 
 #The following deploys the zipped file of whole repository always. Hence added above, and commenting this
