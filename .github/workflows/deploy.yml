@@ -34,10 +34,8 @@ jobs:
       run: cat changed_files.txt
 
     - name: Zip changed files only
-      run: |
-        mkdir lambda_function_code
-        xargs -a changed_files.txt -I {} cp --parents {} lambda_function_code/
-        zip -r lambda_function_code.zip \
+      run: |     
+        zip -r lambda_function_code.zip $(cat changed_files.txt) \
         -x "*.git*" "*.zip" "*.gitignore"
 
 #The following deploys the zipped file of whole repository always. Hence added above, and commenting this
