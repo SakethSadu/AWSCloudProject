@@ -30,6 +30,6 @@ jobs:
 
     - name: Deploy code to Lambda
       run: |
-        aws lambda update-function-code
-          --function-name py_sftp_s3_file_transfer
+        aws lambda update-function-code \
+          --function-name py_sftp_s3_file_transfer \
           --zip-file fileb://lambda_function_code.zip
