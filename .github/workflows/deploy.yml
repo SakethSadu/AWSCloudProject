@@ -20,13 +20,38 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-2
 
-    - name: Zip Lambda function code
+    - name: Get list of changed files
+      id: changes
       run: |
-        zip -r lambda_function_code.zip . \
-        -x '*.git*' '*.zip' # Exclude .git, .zip files
+        git fetch --depth=2
+        if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+          git diff --name-only HEAD^ HEAD > changed_files.txt
+        else
+          git diff --name-only $(git hash-object -t tree /dev/null) HEAD > changed_files.txt
+        fi
+
+    - name: Display changed files
+      run: cat changed_files.txt
+
+    - name: Zip changed files only
+      run: |
+        mkdir lambda_function_code
+        xargs -a changed_files.txt -I {} cp --parents {} lambda_function_code/
+        zip -r lambda_function_code.zip lambda_function_code/ \
+        -x "*.git*" "*.zip" "*.gitignore"
+
+#The following deploys the zipped file of whole repository always. Hence added above, and commenting this
+    #- name: Zip Lambda function code
+      #run: |
+        #zip -r lambda_function_code.zip . \
+        #-x '*.git*' '*.zip' 'unwanted_folder/**'  # Exclude .git, .zip files, and unwanted_folder
+
+    
+    - name: Install AWS CLI
+      run: sudo apt-get install -y awscli      
 
     - name: Deploy code to Lambda
-      uses: aws-actions/aws-lambda-deploy@v1
-      with:
-        function-name: py_sftp_s3_file_transfer
-        zip-file: lambda_function_code.zip
+      run: |
+        aws lambda update-function-code \
+          --function-name py_sftp_s3_file_transfer \
+          --zip-file fileb://lambda_function_code.zip
