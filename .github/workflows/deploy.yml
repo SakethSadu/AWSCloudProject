@@ -24,9 +24,12 @@ jobs:
       run: |
         zip -r lambda_function_code.zip . \
         -x '*.git*' '*.zip' # Exclude .git, .zip files
+    
+    - name: Install AWS CLI
+      run: sudo apt-get install awscli      
 
     - name: Deploy code to Lambda
-      uses: aws-actions/aws-lambda-deploy@v1
-      with:
-        function-name: py_sftp_s3_file_transfer
-        zip-file: lambda_function_code.zip
+      run: |
+        aws lambda update-function-code \
+          --function-name py_sftp_s3_file_transfer\  # Replace with your Lambda function name
+          --zip-file fileb://lambda_function_code.zip
