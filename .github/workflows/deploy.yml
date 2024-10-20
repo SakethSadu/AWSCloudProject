@@ -24,7 +24,11 @@ jobs:
       id: changes
       run: |
         git fetch --depth=2
-        git diff --name-only HEAD^ HEAD > changed_files.txt
+        if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+          git diff --name-only HEAD^ HEAD > changed_files.txt
+        else
+          git diff --name-only $(git hash-object -t tree /dev/null) HEAD > changed_files.txt
+        fi
 
     - name: Display changed files
       run: cat changed_files.txt
