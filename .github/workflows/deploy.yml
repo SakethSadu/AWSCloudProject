@@ -20,10 +20,21 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-2
 
-    - name: Zip Lambda function code
+    - name: Get list of changed files
+      id: changes
       run: |
-        zip -r lambda_function_code.zip . \
-        -x '*.git*' '*.zip'
+        git fetch --depth=2
+        git diff --name-only HEAD^ HEAD > changed_files.txt
+
+    - name: Display changed files
+      run: cat changed_files.txt
+
+    - name: Zip changed files only
+      run: |
+        mkdir lambda_function_code
+        xargs -a changed_files.txt -I {} cp --parents {} lambda_function_code/
+        zip -r lambda_function_code.zip lambda_function_code/ \
+        -x "*.git*" "*.zip" "*.gitignore"
     
     - name: Install AWS CLI
       run: sudo apt-get install -y awscli      
