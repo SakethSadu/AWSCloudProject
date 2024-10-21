@@ -51,7 +51,7 @@ jobs:
         if: env.first_deployment == 'true'
         run: |
           zip -r lambda_function_code.zip . \
-            -x '*.git*' '*.zip' 'unwanted_folder/**'  # Exclude .git, .zip files, and unwanted_folder
+            -x '*.git*' '*.zip'  # Exclude .git, .zip files.
 
       - name: Install AWS CLI
         run: sudo apt-get install -y awscli      
