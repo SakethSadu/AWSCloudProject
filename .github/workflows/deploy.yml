@@ -35,6 +35,7 @@ jobs:
         id: changes
         run: |
           git fetch --depth=2
+          git checkout master
           if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
             git diff --name-only HEAD^ HEAD > changed_files.txt
           else
