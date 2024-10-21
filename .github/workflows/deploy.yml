@@ -3,53 +3,61 @@ name: Deploy Lambda Function SFTP To S3 Code
 on:
   push:
     branches:
-      - master  # Trigger deployment when you push to the master branch, we can add the main branch later
+      - master  # Trigger deployment when you push to the master branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
 
-    - name: Get list of changed files
-      id: changes
-      run: |
-        git fetch --depth=2
-        if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
-          git diff --name-only HEAD^ HEAD > changed_files.txt
-        else
-          git diff --name-only $(git hash-object -t tree /dev/null) HEAD > changed_files.txt
-        fi
+      - name: Check if Lambda function exists and has code
+        id: check_lambda
+        run: |
+          existing_code=$(aws lambda get-function --function-name py_sftp_s3_file_transfer --query 'Configuration.CodeSize' --output text)
+          echo "Existing code size: $existing_code"
+          if [ "$existing_code" -eq 0 ]; then
+            echo "first_deployment=true" >> $GITHUB_ENV
+          else
+            echo "first_deployment=false" >> $GITHUB_ENV
+          fi
 
-    - name: Display changed files
-      run: cat changed_files.txt
+      - name: Get list of changed files
+        id: changes
+        run: |
+          git fetch --depth=2
+          if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+            git diff --name-only HEAD^ HEAD > changed_files.txt
+          else
+            git diff --name-only $(git hash-object -t tree /dev/null) HEAD > changed_files.txt
+          fi
 
-    #- name: Zip changed files only
-      #run: |     
-       # zip -r lambda_function_code.zip $(cat changed_files.txt) \
-        #-x "*.git*" "*.zip" "*.gitignore"
+      - name: Zip changed files only
+        if: env.first_deployment == 'false'
+        run: |
+          zip -r lambda_function_code.zip $(cat changed_files.txt) \
+            -x "*.git*" "*.zip" "*.gitignore"
 
-#The following deploys the zipped file of whole repository always. Hence added above, and commenting this
-    - name: Zip Lambda function code
-      run: |
-        zip -r lambda_function_code.zip . \
-        -x '*.git*' '*.zip' 'unwanted_folder/**'  # Exclude .git, .zip files, and unwanted_folder
+      - name: Zip entire Lambda function code
+        if: env.first_deployment == 'true'
+        run: |
+          zip -r lambda_function_code.zip . \
+            -x '*.git*' '*.zip' 'unwanted_folder/**'  # Exclude .git, .zip files, and unwanted_folder
 
-    
-    - name: Install AWS CLI
-      run: sudo apt-get install -y awscli      
+      - name: Install AWS CLI
+        run: sudo apt-get install -y awscli      
 
-    - name: Deploy code to Lambda
-      run: |
-        aws lambda update-function-code \
-          --function-name py_sftp_s3_file_transfer \
-          --zip-file fileb://lambda_function_code.zip
+      - name: Deploy code to Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name py_sftp_s3_file_transfer \
+            --zip-file fileb://lambda_function_code.zip
